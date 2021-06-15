@@ -1,0 +1,898 @@
+#------------------------------------------------------------------------------
+# --- PHOTOVOLTAIK-POTENZIAL-DASHBOARD FÜR DIE FORTIMO SOLUTIONS AG
+# --- 
+# --- V1 April 2021
+# --- 
+# --- Libraries: ggplot2, readxl, Rcpp, vtable, tidyverse, factoextra, proxy, caret, e1071
+# --- 
+# --- Daten: Masterliste.xlsx (Öffentliche Daten zu Gemeinden)
+# --- 
+# --- 
+#------------------------------------------------------------------------------
+
+# Packages installieren, falls nicht vorhanden
+
+if(!"ggplot2" %in% rownames(installed.packages()))
+  install.packages("ggplot2")
+
+if(!"readxl" %in% rownames(installed.packages()))
+  install.packages("readxl")
+
+if(!"Rcpp" %in% rownames(installed.packages()))
+  install.packages("Rcpp")
+
+if(!"vtable" %in% rownames(installed.packages()))
+  install.packages("vtable")
+
+if(!"tidyverse" %in% rownames(installed.packages()))
+  install.packages("tidyverse")
+
+if(!"cluster" %in% rownames(installed.packages()))
+  install.packages("cluster")
+
+if(!"TSdist" %in% rownames(installed.packages()))
+  install.packages("TSdist")
+
+if(!"factoextra" %in% rownames(installed.packages()))
+  install.packages("factoextra")
+
+if(!"proxy" %in% rownames(installed.packages()))
+  install.packages("proxy")
+
+if(!"party" %in% rownames(installed.packages()))
+  install.packages("party")
+
+if(!"caret" %in% rownames(installed.packages()))
+  install.packages("caret")
+
+if(!"e1071" %in% rownames(installed.packages()))
+  install.packages("e1071")
+
+if(!"scatterplot3d" %in% rownames(installed.packages()))
+  install.packages("scatterplot3d")
+
+
+
+# Packages laden
+library("ggplot2")
+library("readxl")
+library("Rcpp")
+library("vtable")
+library("tidyverse")
+library("cluster")
+library("TSdist")
+library("proxy")
+library("factoextra")
+library("party")
+library("caret")
+library("e1071")
+library("scatterplot3d")
+
+# Einlesen der Daten
+CH <- read_excel("Datensätze/Masterliste.xlsx")
+
+#------------------------------------------------------------------------------
+# --- Datenübersicht und Statistiken Gesamtschweiz
+#------------------------------------------------------------------------------
+
+# Zusammenfassung der Daten
+summary(CH)
+
+# Zusammenfassung der Daten als Tabelle
+st(CH)
+
+# Struktur
+str(CH)
+
+# Erste Einträge 
+head(CH)
+
+plot(CH)
+
+
+#------------------------------------------------------------------------------
+# --- Datenübersicht und Statistiken St. Gallen
+#------------------------------------------------------------------------------
+
+# Datensatz St. Gallen generieren
+SG <- CH[CH$KANTONNR == 17,]
+
+# ---- Datenübersicht
+
+# Zusammenfassung der Daten
+summary(SG)
+
+# Zusammenfassung der Daten als Tabelle
+st(SG)
+
+# Struktur
+str(SG)
+
+# Erste Einträge 
+head(SG)
+
+# ----------------------------------------
+# ---- Grafische Zusammenfassung ggplot
+# ----------------------------------------
+plot(SG)
+
+# -- Energiestadt
+
+ggplot(SG, aes(SOLARPOTENTIAL, EINWOHNER, color=ENERGIESTADT)) + geom_point()
+# --> Je mehr Solarpotenzial/Einwohner desto eher eine Energiestadt
+
+
+# -- Arbeitsstätten
+
+ggplot(SG, aes(FLÄCHE, ARBEITSSTÄTTEN)) + geom_point() +   ylim(0, 1000) + ylab("Anzahl Arbeitssätten") + xlab("Fläche in m2")
+plot(SG$FLÄCHE, SG$ARBEITSSTÄTTEN)
+# -> Die Fläche hat keinen Einfluss auf die Anzahl Arbeitsstätten
+
+cor.test(SG$FLÄCHE,SG$ARBEITSSTÄTTEN,method="pearson")
+cor.test(CH$FLÄCHE,CH$ARBEITSSTÄTTEN,method="pearson")
+
+ggplot(SG, aes(EINWOHNER, ARBEITSSTÄTTEN)) + geom_point()
+# -> Die Anzahl Einwohner hat einen Einfluss auf die Anzahl Arbeitsstätten
+
+ggplot(SG, aes(BESCHÄFTIGTE, ARBEITSSTÄTTEN)) + geom_point()
+# -> Die Anzahl der Beschäftigten hat einen Einfluss auf die Anzahl Arbeitsstätten
+
+cor.test(SG$ARBEITSSTÄTTEN,SG$BESCHÄFTIGTE,method="pearson")
+cor.test(CH$ARBEITSSTÄTTEN,CH$BESCHÄFTIGTE,method="pearson")
+
+# -- Soloarpotenzial
+
+ggplot(SG, aes(FLÄCHE, SOLARPOTENTIAL)) + geom_point()
+# -> Die Fläche hat keinen Einfluss auf das Solarpotenzial
+
+ggplot(SG, aes(EINWOHNER, SOLARPOTENTIAL)) + geom_point()
+# -> Die Anzahl Einwohner hat einen Einfluss auf das Solarpotenzial
+
+ggplot(SG, aes(BESCHÄFTIGTE, SOLARPOTENTIAL)) + geom_point()
+# -> Die Anzahl der Beschäftigten hat einen Einfluss auf das Solarpotenzial
+
+ggplot(SG, aes(ARBEITSSTÄTTEN, SOLARPOTENTIAL)) + geom_point()
+# -> Die Anzahl der Arbeitsstätten hat einen Einfluss auf das Solarpotenzial
+# -> Auch erwartet, durch die oberen drei Auswertungen, welche Identisch sind mit den Arbeitsstätten
+
+cor.test(SG$SOLARPOTENTIAL,SG$ARBEITSSTÄTTEN,method="pearson")
+cor.test(CH$SOLARPOTENTIAL,CH$ARBEITSSTÄTTEN,method="pearson")
+
+
+ggplot(SG, aes(LADESTATIONEN, SOLARPOTENTIAL)) + geom_point()
+# -> Die Anzahl der Ladestationen hat keinen Einfluss auf das Solarpotenzial (wäre auch willkürlich)
+
+ggplot(SG, aes(VERKAUFSPREIS, SOLARPOTENTIAL)) + geom_point()
+# -> Der Verkaufspreishat keinen Einfluss auf das Solarpotenzial (wäre auch willkürlich)
+
+ggplot(SG, aes(ENERGIESTADT, LADESTATIONEN)) + geom_point()
+# -> Zwischen dem Energiestadtlabel und der Aanzahl Ladestationen besteht kein Zusammenhang
+
+cor.test(SG$LADESTATIONEN,SG$ENERGIESTADT,method="pearson")
+cor.test(CH$LADESTATIONEN,CH$ENERGIESTADT,method="pearson")
+
+# ---- 
+#  Fazit: Grafische Zusammenfassung
+#    - Die Anzahl Einwohner/Beschäftigten hat einen Einfluss auf die Anzahl Arbeitsstätten. Die Fläche nicht.
+#    - Die Anzahl Arbeitsstätten hat einen Einfluss auf das Solarpotenzial
+# ---- 
+
+
+# ----------------------------------------
+# ---- Grafische Zusammenfassung boxplot/hist
+# ----------------------------------------
+
+boxplot(SG$SOLARPOTENTIAL, main="Solarpotenzial")
+
+boxplot(SG$EINKAUFSPREIS, SG$VERKAUFSPREIS, main="Vergleich Strom Ein- / Verkaufspreis", ylab ="Rappen/KWH",  names=c("Einkauf","Verkauf"),outline=TRUE)
+# -> Verkaufspreis durchgehend tiefer
+
+boxplot(SG$EINWOHNER, SG$BESCHÄFTIGTE, main="Vergleich Einwohner / Beschäftigte (ohne Ausreisser)",  names=c("Einwohner","Beschäftigte"),outline=FALSE
+)
+# -> Weniger Beschäftigte als Einwohner
+
+hist(SG$SOLARPOTENTIAL, breaks=50)
+hist(SG$EINWOHNER, breaks=15)
+hist(SG$BESCHÄFTIGTE, breaks=15)
+hist(SG$LADESTATIONEN, breaks=30)
+hist(SG$ENERGIESTADT, breaks=20)
+hist(SG$ARBEITSSTÄTTEN, breaks=20, xlab="Anzahl Arbeitsstätten", ylab="Anzahl Gemeinden in SG")
+
+hist(SG$VERKAUFSPREIS, breaks=10)
+
+hist(SG$EINKAUFSPREIS, breaks=10)
+#Normalverteilt
+plot(density(SG$EINKAUFSPREIS))
+
+# TODO? Scatterplots gem. Clustering PDF
+
+
+# ----------------------------------------
+# ---- Datensatz bereinigen und ergänzen
+# ----------------------------------------
+
+# -- NA bereinigen in benötigten Spalten zur Kalkulation
+# - Spalte 4: Solarpotenzial
+# - Spalte 5: Einwohner
+# - Spalte 7: Beschäftigte
+# - Spalte 8: Arbeitsstätten
+
+# Spalten 4,5,7,8 mit allen Zeilen ohne NA Werte
+View(SG[,c(4,5,7,8)])
+row.has.na <- apply(SG[,c(4,5,7,8)], 1, function(x){any(is.na(x))})
+sum(row.has.na)
+SG2<- SG[!row.has.na,]
+
+# --> Nach der Bereinigung noch 75 von 91 Gemeinden
+
+
+# Ergänzung 1:  Solarpotenzial Beschäftigte Total
+#               Beschäftigte / (Einwohner+Beschäftigte) = Prozentteil Beschäftigte
+#               Prozenteil Beschäftigte * Solarpotenzial = SOLPOTBESCH
+
+SG2$SOLPOTBESCH <- (SG2$BESCHÄFTIGTE / (SG2$BESCHÄFTIGTE + SG2$EINWOHNER) * SG2$SOLARPOTENTIAL)
+
+# Ergänzung 2:  Solarpotenzial pro Arbeitsstätte
+#               SOLPOTBESCH / Anzahl Arbeitsstätten
+
+SG2$SOLPOTARB <- SG2$SOLPOTBESCH / SG2$ARBEITSSTÄTTEN
+
+boxplot(SG2$SOLPOTBESCH, main="Solarpotenzial Beschäftigte")
+hist(SG2$SOLPOTBESCH, breaks=5)
+hist(SG2$SOLPOTBESCH, breaks=10)
+
+boxplot(SG2$SOLPOTARB, main="Solarpotenzial pro Arbeitsstätte")
+hist(SG2$SOLPOTARB, breaks=8)
+hist(SG2$SOLPOTARB, breaks=20)
+
+
+# Ergänzung 3:  Delta Strom Ein- und Verkaufspreis in Rp/kWh
+#               Strom Einkaufspreis-Rp/kWh - Strom Verkaufspreis-Rp/kWh
+
+SG2$DELTAPREIS <- SG2$EINKAUFSPREIS - SG2$VERKAUFSPREIS
+
+boxplot(SG2$EINKAUFSPREIS, SG2$VERKAUFSPREIS, SG2$DELTAPREIS, main="Vergleich Strom Ein- / Verkaufs und Deltapreis", ylab ="Rappen/KWH",  names=c("Einkauf","Verkauf", "Delta"),outline=TRUE)
+# -> Verkaufspreis durchgehend tiefer
+
+#Vergleich Schweiz
+row.has.na <- apply(CH[,c(4,5,7,8)], 1, function(x){any(is.na(x))})
+sum(row.has.na)
+CH2<- CH[!row.has.na,]
+
+
+cor.test(CH3$EINKAUFSPREIS,CH3$VERKAUFSPREIS,method="pearson")
+cor.test(CH3$EINKAUFSPREIS,CH3$DELTAPREIS,method="pearson")
+
+CH2$DELTAPREIS <- CH2$EINKAUFSPREIS - CH2$VERKAUFSPREIS
+
+boxplot(CH2$EINKAUFSPREIS, CH2$VERKAUFSPREIS, CH2$DELTAPREIS, main="Vergleich Strom Ein- / Verkaufs und Deltapreis", ylab ="Rappen/KWH",  names=c("Einkauf","Verkauf", "Delta"),outline=TRUE)
+
+ggplot(CH2, aes(VERKAUFSPREIS, EINKAUFSPREIS, color=DELTAPREIS)) + geom_point()
+
+ggplot(SG2, aes(VERKAUFSPREIS, EINKAUFSPREIS, color=DELTAPREIS)) + geom_point()
+# ----------------------------------------
+# ---- Datensätze für Clustering bestimmen
+# ----------------------------------------
+
+# Solarpotenzial: 
+#   - SOLPOTARB = Solarpotenzial pro Arbeitsstätte
+# 
+# Wirtschaftlichkeit: 
+#   - DELTAPREIS = Unterschied Ein- und Verkaufspreis
+#
+# Standortattraktivität:
+#   - Zu bestimmen aus Anzahl Arbeitsstätten, Ladestationen, Energiestadterreichung
+
+
+# --- Grafische Darstellung Standortattraktivität
+plot(SG2$LADESTATIONEN, SG2$ENERGIESTADT)
+plot(SG2$LADESTATIONEN, SG2$ARBEITSSTÄTTEN)
+plot(SG2$ENERGIESTADT, SG2$LADESTATIONEN)
+plot(SG2$ENERGIESTADT, SG2$ARBEITSSTÄTTEN)
+ggplot(SG2, aes(ARBEITSSTÄTTEN, LADESTATIONEN, color=ENERGIESTADT)) + geom_point()
+# -> Energiestätten haben in der Tendenz eher viele Arbeitsstätten? (mehr finanzielle Mittel?)
+ggplot(SG2, aes(ENERGIESTADT, LADESTATIONEN, color=ARBEITSSTÄTTEN)) + geom_point()
+ggplot(SG2, aes(ENERGIESTADT, ARBEITSSTÄTTEN, color=LADESTATIONEN)) + geom_point()
+
+# ---- 
+#  Fazit: Grafische Zusammenfassung Standortattraktivität
+#    - Es lassen sich keine klaren Zusammenhänge erkennen
+#    - Allenfalls haben Gemeinden mit mehr Arbeitstätten mehr finanzielle Mittel um das Label zu erarbeiten
+# ---- 
+
+# Vorgehen:
+#  1: Übersicht Potenzial/Preisdelta/Arbeitssätten
+#  2: Clustering mit drei Potenzialen
+#  3: Zusätzlich weitere Parameter
+
+ggplot(SG2, aes(SOLPOTARB, DELTAPREIS, color=ARBEITSSTÄTTEN)) + geom_point()
+ggplot(SG2, aes(SOLPOTARB, ARBEITSSTÄTTEN, color=DELTAPREIS)) + geom_point()
+ggplot(SG2, aes(DELTAPREIS, ARBEITSSTÄTTEN, color=SOLPOTARB)) + geom_point()
+#Welche Parameter sind am wichtigsten? Wahrscheinlich Menge/Potenzial?
+
+
+# --- Testweise Cluster mit SOLPOTARB, ARBEITSSTÄTTEN, DELTAPREIS
+
+# Benötigte Daten mit Z-Transformation abfüllen
+
+# Mit Gemeindenummer
+#SGZ <- SG2[,c(1)]
+#SGZ$ARBEITSSTÄTTEN <- scale(SG2 %>% select(ARBEITSSTÄTTEN))
+#SGZ$SOLPOTARB <- scale(SG2 %>% select(SOLPOTARB))
+#SGZ$DELTAPREIS <- scale(SG2 %>% select(DELTAPREIS))
+# boxplot(SGZ[,c(2-3)])
+
+SG2Z <-scale(SG2 %>% select(ARBEITSSTÄTTEN, SOLPOTARB, DELTAPREIS))
+
+boxplot(SG2Z)
+
+# Elbow Berechnung
+
+set.seed(12345)
+
+# --- Mittels Sum of Squares optimale Anzahl Cluster herausfinden
+
+# Maximal 10 Cluster
+k.max <- 10
+
+# total within_sum_of_squares berechnen
+SG2_tot_wss <- sapply(1:k.max, function(k){kmeans(SG2Z, k, nstart=50,iter.max = 15)$tot.withinss})
+
+# total plotten
+plot(1:k.max, SG2_tot_wss,
+     type="b", pch = 19, frame = FALSE,
+     xlab="Anzahl Cluster [K]",
+     ylab="Total within-clusters sum of squares [tot.withinss]")
+
+# --> Optimale Cluster Grösse ist 4
+
+#--- kMeans Cluster
+
+# Mit 4 Cluster
+SG2Z_KMRES3 <- kmeans(SG2Z,centers=4,nstart=25)
+fviz_cluster(SG2Z_KMRES3, SG2Z)
+
+#--- kMedoids Cluster
+
+# Mit 2 Cluster
+SG2Z_PAMRES2 <- pam(SG2Z, 2)
+View(SG2Z_PAMRES2)
+SG2Z_PAMRES2$medoids
+SG2Z_PAMRES2$clustering
+SG2Z_PAMRES2$clusinfo
+fviz_cluster(SG2Z_PAMRES2,SG2Z)
+
+# Mit 4 Cluster
+SG2Z_PAMRES4 <- pam(SG2Z, 4)
+SG2Z_PAMRES4$medoids
+SG2Z_PAMRES4$clustering
+SG2Z_PAMRES4$clusinfo
+fviz_cluster(SG2Z_PAMRES4,SGZ)
+
+# Zusammenführen mit SG2 Datensatz
+SG2_PAMCL4 <- cbind(SG2, CLUSTER = SG2Z_PAMRES4$cluster)
+SG2_PAMCL4
+
+ggplot(SG2_PAMCL4, aes(ARBEITSSTÄTTEN, SOLPOTARB , shape = CLUSTER, color=CLUSTER)) + geom_point() +
+  scale_shape_identity()  +geom_text(aes(label=CLUSTER),hjust=1.6,vjust=0.40)
+
+ggplot(SG2_PAMCL4, aes(ARBEITSSTÄTTEN, DELTAPREIS , shape = CLUSTER, color=CLUSTER)) + geom_point() +
+  scale_shape_identity()  +geom_text(aes(label=CLUSTER),hjust=1.6,vjust=0.40)
+
+ggplot(SG2_PAMCL4, aes(SOLPOTARB, DELTAPREIS , shape = CLUSTER, color=CLUSTER, label=CLUSTER)) + geom_point() +
+  scale_shape_identity() +geom_text(aes(label=CLUSTER),hjust=1.6,vjust=0.40)
+
+
+plot(SG2_PAMCL4$CLUSTER, SG2_PAMCL4$SOLPOTARB)
+plot(SG2_PAMCL4$CLUSTER, SG2_PAMCL4$DELTAPREIS)
+plot(SG2_PAMCL4$CLUSTER, SG2_PAMCL4$ARBEITSSTÄTTEN)
+
+# Gruppe 1: Solarpotenzial: Mittel - Hoch, Preis: Tief-Mittel, Arbeitsstätten: Tief
+# Geeignet, doch nicht viele Arbeitsstätten 
+
+# Gruppe 2: Solarpotenzial: Hoch, Preis: Mittel - Hoch, Arbeitsstätten: Tief
+# Ideal, doch nicht viele Arbeitsstätten
+
+# Gruppe 3: Solarpotenzial: Tief - Mittel, Preis: Mittel - Hoch, Arbeitsstätten: Hoch
+# Eher weniger Potenzial, doch viele Arbeitsstätten
+
+# Gruppe 4: Solarpotenzial: Tief, Preis: Mittel - Hoch, Arbeitsstätten: Tief
+# Geeignet: Eher weniger geeignet
+
+# Mit Namen zu unübersichtlich
+# ggplot(SG2_PAMCL4, aes(ARBEITSSTÄTTEN, SOLPOTARB , shape = CLUSTER, color=CLUSTER, label=NAME)) + geom_point() +
+# scale_shape_identity() +geom_text(aes(label=NAME),hjust=0, vjust=0)
+
+scatterplot3d(SG2_PAMCL4$DELTAPREIS,SG2_PAMCL4$ARBEITSSTÄTTEN,SG2_PAMCL4$SOLPOTARB, pch=21, bg=c("red","green3","blue","yellow")[unclass(SG2_PAMCL4$CLUSTER)])
+scatterplot3d(SG2_PAMCL4$ARBEITSSTÄTTEN,SG2_PAMCL4$SOLPOTARB,SG2_PAMCL4$DELTAPREIS, pch=21, bg=c("red","green3","blue","yellow")[unclass(SG2_PAMCL4$CLUSTER)])
+
+# Speichern als CSV für Tableau import
+write.csv(SG2_PAMCL4, "SG2_PAMCL4.csv")
+
+# ----------------------------------------
+# ---- Decision Tree anhand PAMCL4 Cluster
+# ----------------------------------------
+
+
+# --- (random) split into TRAININGS + TEST data
+
+SG2_DT <- SG2_PAMCL4 %>% select(ARBEITSSTÄTTEN, SOLPOTARB, DELTAPREIS, CLUSTER)
+
+#SG2_DT  = na.omit(SG2_DT)
+
+SG2_IND <- sample(2,nrow(SG2_DT), replace=TRUE,prob=c(0.7,0.3))
+
+
+
+#SG2_TRAIN <- SG2_DT[SG2_IND==1,]
+SG2_TRAIN <- SG2_DT
+SG2_TEST <- SG2_DT[SG2_IND==2,]
+
+
+SG2_FORM <- CLUSTER ~ ARBEITSSTÄTTEN + SOLPOTARB + DELTAPREIS
+SG2_CTREE <- ctree(SG2_FORM, data=SG2_TRAIN)
+
+
+# --- check the Classifier (--> CONFUSION matrix)
+table(predict(SG2_CTREE), SG2_TRAIN$CLUSTER)
+print (SG2_CTREE)
+
+SG2_CTREE_T<- table(predict(SG2_CTREE), SG2_TRAIN$CLUSTER)
+View(SG2_CTREE_T)
+
+# --- VISUALIZE Decision Tree
+plot(SG2_CTREE)
+plot(SG2_CTREE, type="simple")
+
+# --- PREDICT on test data
+
+# SG2_TEST <- SG2_TEST[complete.cases(SG2_TEST),] wegen Fehler, doch hat nicht geholfen.
+SG2_CTREE_PRED <- predict(SG2_CTREE, newdata=SG2_TEST)
+table(SG2_CTREE_PRED, SG2_TEST$CLUSTER)
+
+SG2_CTREE_PRED_T <- table(predict(SG2_CTREE), SG2_TRAIN$CLUSTER)
+View(SG2_CTREE_PRED_T)
+
+# --- compute QUALITY Measures by Confusion Matrix
+SG2_ZPRED <- table(SG2_CTREE_PRED, SG2_TEST$CLUSTER)
+confusionMatrix(SG2_ZPRED)
+
+
+# ----------------------------------------
+# ---- SG3: Cluster mit Anzahl Arbeitsstätten gruppiert und nur dem Einkaufspreis
+# ----------------------------------------
+
+
+SG3 <- within(SG2, ARBEITSSTÄTTEN_N <- as.integer(cut(ARBEITSSTÄTTEN, quantile(ARBEITSSTÄTTEN, probs=0:10/10), include.lowest=TRUE)))
+hist(SG3$ARBEITSSTÄTTEN)
+hist(SG3$ARBEITSSTÄTTEN_N, xlab="Dezil Anzahl Arbeitsstätten", ylab="Anzahl Gemeinden in SG")
+plot(SG3$ARBEITSSTÄTTEN_N, SG3$ARBEITSSTÄTTEN)
+# Kategorie von 709 - 7166
+
+
+# Ergänzung 1:  Solarpotenzial Beschäftigte Total
+#               Beschäftigte / (Einwohner+Beschäftigte) = Prozentteil Beschäftigte
+#               Prozenteil Beschäftigte * Solarpotenzial = SOLPOTBESCH
+
+SG3$SOLPOTBESCH <- (SG3$BESCHÄFTIGTE / (SG3$BESCHÄFTIGTE + SG3$EINWOHNER) * SG3$SOLARPOTENTIAL)
+
+# Ergänzung 2:  Solarpotenzial pro Arbeitsstätte
+#               SOLPOTBESCH / Anzahl ARBEITSSTÄTTEN
+
+SG3$SOLPOTARB <- SG3$SOLPOTBESCH / SG3$ARBEITSSTÄTTEN
+
+boxplot(SG3$SOLPOTBESCH, main="Solarpotenzial Beschäftigte")
+hist(SG3$SOLPOTBESCH, breaks=5)
+hist(SG3$SOLPOTBESCH, breaks=10)
+
+boxplot(SG3$SOLPOTARB, main="Solarpotenzial pro Arbeitsstätte")
+hist(SG3$SOLPOTARB, breaks=8)
+hist(SG3$SOLPOTARB, breaks=20)
+
+# ----------------------------------------
+# ---- Datensätze für Clustering bestimmen
+# ----------------------------------------
+
+# Solarpotenzial: 
+#   - SOLPOTARB = Solarpotenzial pro Arbeitsstätte
+# 
+# Wirtschaftlichkeit: 
+#   - Einkaufspreis
+#
+# Standortattraktivität:
+#   - ARBEITSSTÄTTEN_N = Dezil der Anzahl Arbeitssätten
+
+
+SG3Z <-scale(SG3 %>% select(ARBEITSSTÄTTEN_N, SOLPOTARB, EINKAUFSPREIS))
+
+boxplot(SG3Z)
+
+# Elbow Berechnung
+
+set.seed(12345)
+
+# --- Mittels Sum of Squares optimale Anzahl Cluster herausfinden
+
+# Maximal 10 Cluster
+k.max <- 10
+
+# total within_sum_of_squares berechnen
+SG3Z_tot_wss <- sapply(1:k.max, function(k){kmeans(SG3Z, k, nstart=50,iter.max = 15)$tot.withinss})
+
+# total plotten
+plot(1:k.max, SG3Z_tot_wss,
+     type="b", pch = 19, frame = FALSE,
+     xlab="Anzahl Cluster [K]",
+     ylab="Total within-clusters sum of squares [tot.withinss]")
+
+# --> Optimale Cluster Grösse ist 4
+
+#--- kMeans Cluster
+
+# Mit 4 Cluster
+SG3Z_KMRES3 <- kmeans(SG3Z,centers=4,nstart=25)
+fviz_cluster(SG3Z_KMRES3, SG3Z)
+
+#--- kMedoids Cluster
+
+# Mit 4 Cluster
+SG3Z_PAMRES4 <- pam(SG3Z, 4)
+SG3Z_PAMRES4$medoids
+SG3Z_PAMRES4$clustering
+SG3Z_PAMRES4$clusinfo
+fviz_cluster(SG3Z_PAMRES4,SG3Z)
+
+# Zusammenführen mit SG3 Datensatz
+SG3_PAMCL4 <- cbind(SG3, CLUSTER = SG3Z_PAMRES4$cluster)
+SG3_PAMCL4
+
+ggplot(SG3_PAMCL4, aes(ARBEITSSTÄTTEN_N, SOLPOTARB , shape = CLUSTER, color=CLUSTER)) + geom_point() +
+  scale_shape_identity()  +geom_text(aes(label=CLUSTER),hjust=1.6,vjust=0.40)
+
+ggplot(SG3_PAMCL4, aes(ARBEITSSTÄTTEN_N, EINKAUFSPREIS , shape = CLUSTER, color=CLUSTER)) + geom_point() +
+  scale_shape_identity()  +geom_text(aes(label=CLUSTER),hjust=1.6,vjust=0.40)
+
+ggplot(SG3_PAMCL4, aes(SOLPOTARB, EINKAUFSPREIS , shape = CLUSTER, color=CLUSTER, label=CLUSTER)) + geom_point() +
+  scale_shape_identity() +geom_text(aes(label=CLUSTER),hjust=1.6,vjust=0.40)
+
+
+plot(SG3_PAMCL4$CLUSTER, SG3_PAMCL4$SOLPOTARB)
+plot(SG3_PAMCL4$CLUSTER, SG3_PAMCL4$EINKAUFSPREIS)
+plot(SG3_PAMCL4$CLUSTER, SG3_PAMCL4$ARBEITSSTÄTTEN_N)
+
+
+scatterplot3d(SG3_PAMCL4$EINKAUFSPREIS,SG3_PAMCL4$ARBEITSSTÄTTEN_N,SG3_PAMCL4$SOLPOTARB, pch=21, bg=c("red","green3","blue","yellow")[unclass(SG3_PAMCL4$CLUSTER)])
+scatterplot3d(SG3_PAMCL4$ARBEITSSTÄTTEN_N,SG3_PAMCL4$SOLPOTARB,SG3_PAMCL4$EINKAUFSPREIS, pch=21, bg=c("red","green3","blue","yellow")[unclass(SG3_PAMCL4$CLUSTER)])
+
+# Speichern als CSV für Tableau import
+write.csv(SG3_PAMCL4, "SG3_PAMCL4.csv")
+
+# ----------------------------------------
+# ---- Decision Tree anhand PAMCL4 Cluster
+# ----------------------------------------
+
+
+# --- (random) split into TRAININGS + TEST data
+
+SG3_DT <- SG3_PAMCL4 %>% select(ARBEITSSTÄTTEN_N, SOLPOTARB, EINKAUFSPREIS, CLUSTER)
+
+#SG3_DT  = na.omit(SG3_DT)
+
+SG3_IND <- sample(2,nrow(SG3_DT), replace=TRUE,prob=c(0.7,0.3))
+
+
+
+#SG3_TRAIN <- SG3_DT[SG3_IND==1,]
+SG3_TRAIN <- SG3_DT
+SG3_TEST <- SG3_DT[SG3_IND==2,]
+
+
+SG3_FORM <- CLUSTER ~ ARBEITSSTÄTTEN_N + SOLPOTARB + EINKAUFSPREIS
+SG3_CTREE <- ctree(SG3_FORM, data=SG3_TRAIN)
+
+
+# --- check the Classifier (--> CONFUSION matrix)
+table(predict(SG3_CTREE), SG3_TRAIN$CLUSTER)
+print (SG3_CTREE)
+
+SG3_CTREE_T<- table(predict(SG3_CTREE), SG3_TRAIN$CLUSTER)
+View(SG3_CTREE_T)
+
+# --- VISUALIZE Decision Tree
+plot(SG3_CTREE)
+plot(SG3_CTREE, type="simple")
+
+# --- PREDICT on test data
+
+# SG3_TEST <- SG3_TEST[complete.cases(SG3_TEST),] wegen Fehler, doch hat nicht geholfen.
+SG3_CTREE_PRED <- predict(SG3_CTREE, newdata=SG3_TEST)
+table(SG3_CTREE_PRED, SG3_TEST$CLUSTER)
+
+SG3_CTREE_PRED_T <- table(predict(SG3_CTREE), SG3_TRAIN$CLUSTER)
+View(SG3_CTREE_PRED_T)
+
+# --- compute QUALITY Measures by Confusion Matrix
+SG3_ZPRED <- table(SG3_CTREE_PRED, SG3_TEST$CLUSTER)
+confusionMatrix(SG3_ZPRED)
+
+
+# ----------------------------------------
+# ---- CH3 Cluster analog SG3 Cluster
+# ----------------------------------------
+
+
+# -- NA bereinigen in benötigten Spalten zur Kalkulation
+# - Spalte 4: Solarpotenzial
+# - Spalte 5: Einwohner
+# - Spalte 7: Beschäftigte
+# - Spalte 8: Arbeitsstätten
+# - Spalte 11: Einkaufspreis
+
+# Spalten 4,5,7,8 mit allen Zeilen ohne NA Werte
+View(CH[,c(4,5,7,8,11)])
+row.has.na <- apply(CH[,c(4,5,7,8,11)], 1, function(x){any(is.na(x))})
+sum(row.has.na)
+CH3<- CH[!row.has.na,]
+
+
+CH3 <- within(CH3, ARBEITSSTÄTTEN_N <- as.integer(cut(ARBEITSSTÄTTEN, quantile(ARBEITSSTÄTTEN, probs=0:10/10), include.lowest=TRUE)))
+hist(CH3$ARBEITSSTÄTTEN)
+hist(CH3$ARBEITSSTÄTTEN_N, xlab="Dezil Anzahl Arbeitsstätten", ylab="Frequenz")
+plot(CH3$ARBEITSSTÄTTEN_N, CH3$ARBEITSSTÄTTEN)
+
+# --> Nach der Bereinigung noch 1870 von 2612 Gemeinden
+
+
+# Ergänzung 1:  Solarpotenzial Beschäftigte Total
+#               Beschäftigte / (Einwohner+Beschäftigte) = Prozentteil Beschäftigte
+#               Prozenteil Beschäftigte * Solarpotenzial = SOLPOTBESCH
+
+CH3$SOLPOTBESCH <- (CH3$BESCHÄFTIGTE / (CH3$BESCHÄFTIGTE + CH3$EINWOHNER) * CH3$SOLARPOTENTIAL)
+
+# Ergänzung 2:  Solarpotenzial pro Arbeitsstätte
+#               SOLPOTBESCH / Anzahl Arbeitsstätten
+
+CH3$SOLPOTARB <- CH3$SOLPOTBESCH / CH3$ARBEITSSTÄTTEN
+
+boxplot(CH3$SOLPOTBESCH, main="Solarpotenzial Beschäftigte")
+hist(CH3$SOLPOTBESCH, breaks=5)
+hist(CH3$SOLPOTBESCH, breaks=10)
+
+boxplot(CH3$SOLPOTARB, main="Solarpotenzial pro Arbeitsstätte")
+hist(CH3$SOLPOTARB, breaks=8)
+hist(CH3$SOLPOTARB, breaks=20)
+
+# Ergänzung 3:  Delta Strom Ein- und Verkaufspreis in Rp/kWh
+#               Strom Einkaufspreis-Rp/kWh - Strom Verkaufspreis-Rp/kWh
+
+CH3$DELTAPREIS <- CH3$EINKAUFSPREIS - CH3$VERKAUFSPREIS
+
+
+CH3 <- within(CH3, ARBEITSSTÄTTEN_N <- as.integer(cut(ARBEITSSTÄTTEN, quantile(ARBEITSSTÄTTEN, probs=0:10/10), include.lowest=TRUE)))
+hist(CH3$ARBEITSSTÄTTEN)
+hist(CH3$ARBEITSSTÄTTEN_N, xlab="Dezil Anzahl Arbeitsstätten", ylab="Frequenz")
+plot(CH3$ARBEITSSTÄTTEN_N, CH3$ARBEITSSTÄTTEN)
+
+
+# Ergänzung 1:  Solarpotenzial Beschäftigte Total
+#               Beschäftigte / (Einwohner+Beschäftigte) = Prozentteil Beschäftigte
+#               Prozenteil Beschäftigte * Solarpotenzial = SOLPOTBESCH
+
+CH3$SOLPOTBESCH <- (CH3$BESCHÄFTIGTE / (CH3$BESCHÄFTIGTE + CH3$EINWOHNER) * CH3$SOLARPOTENTIAL)
+
+# Ergänzung 2:  Solarpotenzial pro Arbeitsstätte
+#               SOLPOTBESCH / Anzahl ARBEITSSTÄTTEN
+
+CH3$SOLPOTARB <- CH3$SOLPOTBESCH / CH3$ARBEITSSTÄTTEN
+
+boxplot(CH3$SOLPOTBESCH, main="Solarpotenzial Beschäftigte")
+hist(CH3$SOLPOTBESCH, breaks=5)
+hist(CH3$SOLPOTBESCH, breaks=10)
+
+boxplot(CH3$SOLPOTARB, main="Solarpotenzial pro Arbeitsstätte")
+hist(CH3$SOLPOTARB, breaks=8)
+hist(CH3$SOLPOTARB, breaks=20)
+
+# ----------------------------------------
+# ---- Datensätze für Clustering bestimmen
+# ----------------------------------------
+
+# Solarpotenzial: 
+#   - SOLPOTARB = Solarpotenzial pro Arbeitsstätte
+# 
+# Wirtschaftlichkeit: 
+#   - Einkaufspreis
+#
+# Standortattraktivität:
+#   - ARBEITSSTÄTTEN_N = Dezil der Anzahl Arbeitssätten
+
+
+CH3Z <-scale(CH3 %>% select(ARBEITSSTÄTTEN_N, SOLPOTARB, EINKAUFSPREIS))
+
+boxplot(CH3Z)
+
+# Elbow Berechnung
+
+set.seed(12345)
+
+# --- Mittels Sum of Squares optimale Anzahl Cluster herausfinden
+
+# Maximal 10 Cluster
+k.max <- 10
+
+# total within_sum_of_squares berechnen
+CH3Z_tot_wss <- sapply(1:k.max, function(k){kmeans(CH3Z, k, nstart=50,iter.max = 15)$tot.withinss})
+
+# total plotten
+plot(1:k.max, CH3Z_tot_wss,
+     type="b", pch = 19, frame = FALSE,
+     xlab="Anzahl Cluster [K]",
+     ylab="Total within-clusters sum of squares [tot.withinss]")
+
+# --> Optimale Cluster Grösse ist 4
+
+#--- kMeans Cluster
+
+# Mit 5 Cluster
+CH3Z_KMRES5 <- kmeans(CH3Z,centers=5,nstart=25)
+fviz_cluster(CH3Z_KMRES5, CH3Z)
+
+#--- kMedoids Cluster
+
+# Mit 5 Cluster
+CH3Z_PAMRES5 <- pam(CH3Z, 5)
+CH3Z_PAMRES5$medoids
+CH3Z_PAMRES5$clustering
+CH3Z_PAMRES5$clusinfo
+fviz_cluster(CH3Z_PAMRES5,CH3Z)
+
+# Zusammenführen mit CH3 Datensatz
+CH3_PAMCL5 <- cbind(CH3, CLUSTER = CH3Z_PAMRES5$cluster)
+CH3_PAMCL5
+
+ggplot(CH3_PAMCL5, aes(ARBEITSSTÄTTEN_N, SOLPOTARB , shape = CLUSTER, color=CLUSTER)) + geom_point() +
+  scale_shape_identity()  +geom_text(aes(label=CLUSTER),hjust=1.6,vjust=0.40)
+
+ggplot(CH3_PAMCL5, aes(ARBEITSSTÄTTEN_N, EINKAUFSPREIS , shape = CLUSTER, color=CLUSTER)) + geom_point() +
+  scale_shape_identity()  +geom_text(aes(label=CLUSTER),hjust=1.6,vjust=0.40)
+
+ggplot(CH3_PAMCL5, aes(SOLPOTARB, EINKAUFSPREIS , shape = CLUSTER, color=CLUSTER, label=CLUSTER)) + geom_point() +
+  scale_shape_identity() +geom_text(aes(label=CLUSTER),hjust=1.6,vjust=0.40)
+
+
+# Als normale Plots
+
+plot(CH3_PAMCL5$CLUSTER, CH3_PAMCL5$SOLPOTARB,
+     main="Solarpotenzial",
+     xlab="Cluster",cex=0.6,
+     ylab="Solarpotenzial pro Arbeitsstätte in GWh/Jahr")
+
+plot(CH3_PAMCL5$CLUSTER, CH3_PAMCL5$EINKAUFSPREIS,
+     main="Wirtschaftspotenzial",
+     xlab="Cluster",
+     ylab="Einkaufspreis in Rp/kWh")
+
+plot(CH3_PAMCL5$CLUSTER, CH3_PAMCL5$ARBEITSSTÄTTEN_N,
+     main="Standortpotenzial",
+     xlab="Cluster",
+     ylab="Anzahl Arbeitsstätten")
+
+# Als Boxplots
+
+boxplot(CH3_PAMCL5$SOLPOTARB~CH3_PAMCL5$CLUSTER,
+     main="Solarpotenzial",
+     xlab="Cluster",cex=0.6,
+     ylab="Solarpotenzial pro Arbeitsstätte in GWh/Jahr")
+
+boxplot(CH3_PAMCL5$EINKAUFSPREIS~CH3_PAMCL5$CLUSTER,
+     main="Wirtschaftspotenzial",
+     xlab="Cluster",
+     ylab="Einkaufspreis in Rp/kWh")
+
+boxplot(CH3_PAMCL5$ARBEITSSTÄTTEN_N~CH3_PAMCL5$CLUSTER,
+     main="Standortpotenzial",
+     xlab="Cluster",
+     ylab="Anzahl Arbeitsstätten")
+
+boxplot(CH3_PAMCL5$SOLPOTARB~CH3_PAMCL5$CLUSTER,
+        main="Solarpotenzial",
+        xlab="Cluster",
+        ylab="Degree Fahrenheit",
+)
+
+
+scatterplot3d(CH3_PAMCL5$EINKAUFSPREIS,CH3_PAMCL5$ARBEITSSTÄTTEN_N,CH3_PAMCL5$SOLPOTARB, pch=21, bg=c("red","green3","blue","yellow")[unclass(CH3_PAMCL5$CLUSTER)])
+scatterplot3d(CH3_PAMCL5$ARBEITSSTÄTTEN_N,CH3_PAMCL5$SOLPOTARB,CH3_PAMCL5$EINKAUFSPREIS, pch=21, bg=c("red","green3","blue","yellow")[unclass(CH3_PAMCL5$CLUSTER)])
+
+scatterplot3d(CH3_PAMCL5$SOLPOTARB,
+              CH3_PAMCL5$EINKAUFSPREIS,
+              CH3_PAMCL5$ARBEITSSTÄTTEN_N,
+              xlab="Solarpotenzial",
+              ylab="Standortpotenzial",
+              zlab="Wirtschaftspotenzial",
+              pch=21, bg=c("white","green1","orange","red","black")[unclass(CH3_PAMCL5$CLUSTER)])
+
+
+# Speichern als CSV für Tableau import
+write.csv(CH3_PAMCL4, "CH3_PAMCL4.csv")
+
+# ----------------------------------------
+# ---- Decision Tree anhand PAMCL4 Cluster
+# ----------------------------------------
+
+
+# --- (random) split into TRAININGS + TEST data
+
+CH3_DT <- CH3_PAMCL5 %>% select(ARBEITSSTÄTTEN_N, SOLPOTARB, EINKAUFSPREIS, CLUSTER)
+
+# Cluster als Faktoren abspeichern
+CH3_DT$CLUSTER <- as.factor(CH3_DT$CLUSTER)
+
+CH3_IND <- sample(2,nrow(CH3_DT), replace=TRUE,prob=c(0.7,0.3))
+
+
+CH3_TRAIN <- CH3_DT[CH3_IND==1,]
+CH3_TEST <- CH3_DT[CH3_IND==2,]
+
+
+CH3_FORM <- CLUSTER ~ ARBEITSSTÄTTEN_N + SOLPOTARB + EINKAUFSPREIS
+
+
+###--- Decision Tree mit Tiefe 2
+
+CH3_CTREE_MAX2 <- ctree(CH3_FORM, data=CH3_TRAIN, control = ctree_control(maxdepth = 2))
+
+# --- check the Classifier (--> CONFUSION matrix)
+table(predict(CH3_CTREE_MAX2), CH3_TRAIN$CLUSTER)
+CH3_CTREE_T<- table(predict(CH3_CTREE_MAX2), CH3_TRAIN$CLUSTER)
+
+
+# --- VISUALIZE Decision Tree
+plot(CH3_CTREE_MAX2)
+#plot(CH3_CTREE, type="simple")
+
+# --- PREDICT on test data
+
+CH3_CTREE_PRED_MAX2 <- predict(CH3_CTREE_MAX2, newdata=CH3_TEST)
+table(CH3_CTREE_PRED, CH3_TEST$CLUSTER)
+
+CH3_CTREE_PRED_T_MAX2 <- table(predict(CH3_CTREE_MAX2), CH3_TRAIN$CLUSTER)
+#View(CH3_CTREE_PRED_T)
+
+# --- compute QUALITY Measures by Confusion Matrix
+CH3_ZPRED_MAX2 <- table(CH3_CTREE_PRED_MAX2, CH3_TEST$CLUSTER)
+confusionMatrix(CH3_ZPRED_MAX2)
+
+
+
+###--- Decision Tree mit Tiefe 2
+
+CH3_CTREE_MAX3 <- ctree(CH3_FORM, data=CH3_TRAIN, control = ctree_control(maxdepth = 3))
+
+# --- check the Classifier (--> CONFUSION matrix)
+table(predict(CH3_CTREE_MAX3), CH3_TRAIN$CLUSTER)
+CH3_CTREE_T<- table(predict(CH3_CTREE_MAX3), CH3_TRAIN$CLUSTER)
+
+
+# --- VISUALIZE Decision Tree
+plot(CH3_CTREE_MAX3)
+#plot(CH3_CTREE, type="simple")
+
+# --- PREDICT on test data
+
+CH3_CTREE_PRED_MAX3 <- predict(CH3_CTREE_MAX3, newdata=CH3_TEST)
+table(CH3_CTREE_PRED, CH3_TEST$CLUSTER)
+
+CH3_CTREE_PRED_T_MAX3 <- table(predict(CH3_CTREE_MAX3), CH3_TRAIN$CLUSTER)
+#View(CH3_CTREE_PRED_T)
+
+# --- compute QUALITY Measures by Confusion Matrix
+CH3_ZPRED_MAX3 <- table(CH3_CTREE_PRED_MAX3, CH3_TEST$CLUSTER)
+confusionMatrix(CH3_ZPRED_MAX3)
+
+
+
+
+
+# Speichern als CSV für Tableau import
+write.csv(CH3_PAMCL5, "CH3_PAMCL5.csv")
